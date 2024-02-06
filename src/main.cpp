@@ -18,8 +18,7 @@ extern "C" {
 #define MQTT_PUB_LED_C "esp32/led/command"
 #define MQTT_PUB_TEMP "esp32/temperature"
 #define MQTT_PUB_HUM  "esp32/humidity"
-#define mqtt_username  "elecrow"
-#define mqtt_password  "elecrow2014"
+
 
 // Initialize DHT20 sensor
 DHT20 dht20;
