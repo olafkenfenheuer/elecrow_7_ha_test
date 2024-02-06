@@ -9,15 +9,9 @@ extern "C" {
 #include <AsyncMqttClient.h>
 #include <DHT20.h>
 
-#define WIFI_SSID "yanfa_software"
-#define WIFI_PASSWORD "yanfa-123456"
+#include <secrets.h>
 
-// Raspberry Pi Mosquitto MQTT Broker
-#define MQTT_HOST IPAddress(192, 168, 50, 233)
 
-// For a cloud MQTT broker, type the domain name
-//#define MQTT_HOST "example.com"
-#define MQTT_PORT 1885
 
 // Temperature MQTT Topics
 #define MQTT_PUB_LED_S  "esp32/led/state"
