@@ -361,31 +361,7 @@ char buffer_h[10];
 
 void publishMqttSensor(){
       
-    // New DHT sensor readings
-    hum = (int)dht20.getHumidity();
-    // Read temperature as Celsius (the default)
-    temp = (int)dht20.getTemperature();
-    Serial.print("hum:");
-    Serial.println( hum);
-    Serial.print("temp:");
-    Serial.println( temp);
-    itoa(hum, buffer_h, 10);
-    itoa(temp, buffer_t, 10);
-    lv_label_set_text(ui_Label2, buffer_t);
-    lv_label_set_text(ui_Label3, buffer_h);
-    if (isnan(temp) || isnan(hum))
-    {
-      Serial.println(F("Failed to read from DHT20 sensor!"));
-      return;
-    }
-    // Publish an MQTT message on topic esp32/dht20/temperature
-    uint16_t packetIdPub1 = mqttClient.publish(MQTT_PUB_TEMP, 0, true, String(temp).c_str());
-    Serial.printf("Publishing on topic %s at QoS 1, packetId: %i", MQTT_PUB_TEMP, packetIdPub1);
-    Serial.printf("Message: %.2f \n", temp);
-    // Publish an MQTT message on topic esp32/dht20/humidity
-    uint16_t packetIdPub2 = mqttClient.publish(MQTT_PUB_HUM, 0, true, String(hum).c_str());
-    Serial.printf("Publishing on topic %s at QoS 1, packetId %i: ", MQTT_PUB_HUM, packetIdPub2);
-    Serial.printf("Message: %.2f \n", hum);
+ 
 
 }
 
