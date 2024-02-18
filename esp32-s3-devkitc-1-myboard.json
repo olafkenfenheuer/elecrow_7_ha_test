@@ -33,6 +33,7 @@
       "esp-builtin"
     ],
     "openocd_target": "esp32s3.cfg"
+    
   },
   "frameworks": [
     "arduino",
