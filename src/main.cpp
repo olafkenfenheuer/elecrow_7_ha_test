@@ -14,8 +14,8 @@ extern "C" {
 
 
 // Temperature MQTT Topics
-#define MQTT_PUB_LED_S  "esp32/led/state"
-#define MQTT_PUB_LED_C "esp32/led/command"
+#define MQTT_PUB_LED_S  "homeassistant/led/state"
+#define MQTT_PUB_LED_C "homeassistant/led/command"
 #define MQTT_PUB_TEMP "esp32/temperature"
 #define MQTT_PUB_HUM  "esp32/humidity"
 
@@ -164,11 +164,13 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
       /*Set the coordinates*/
       data->point.x = touch_last_x;
       data->point.y = touch_last_y;
+      /*
       Serial.print( "Data x :" );
       Serial.println( touch_last_x );
 
       Serial.print( "Data y :" );
       Serial.println( touch_last_y );
+      */
     }
     else if (touch_released())
     {
@@ -185,6 +187,7 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi...");
+  
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
@@ -214,13 +217,14 @@ void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
   Serial.print("Session present: ");
   Serial.println(sessionPresent);
-  uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_LED_C, 2);
+  uint16_t packetIdSub = mqttClient.subscribe(MQTT_PUB_LED_C, 1);
   Serial.print("Subscribing at QoS 2, packetId: ");
   Serial.println(packetIdSub);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   Serial.println("Disconnected from MQTT.");
+  Serial.println(printf("Disconnect Reason: %i\n", reason));
   if (WiFi.isConnected()) {
     xTimerStart(mqttReconnectTimer, 0);
   }
@@ -242,6 +246,7 @@ void onMqttUnsubscribe(uint16_t packetId) {
 
 void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total)
 {
+  
   Serial.println("Publish received.");
   for (int i = 0; i < len; i++) {
     Serial.print((char) payload[i]);
@@ -249,15 +254,15 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
   Serial.println("");
   if (strncmp(payload, "ON", 2) == 0) {
     digitalWrite(LED, HIGH);
-    mqttClient.publish(MQTT_PUB_LED_S, 0, true, "ON");
+    mqttClient.publish(MQTT_PUB_LED_S, 1, true, "ON");
     lv_obj_add_state(ui_Switch2, LV_STATE_CHECKED);
-    lv_label_set_text(ui_Label6, "ON");
+    lv_label_set_text(ui_Label1, "ON");
   }
   if (strncmp(payload, "OFF", 3) == 0) {
     digitalWrite(LED, LOW);
-    mqttClient.publish(MQTT_PUB_LED_S, 0, true, "OFF");
+    mqttClient.publish(MQTT_PUB_LED_S, 1, true, "OFF");
     lv_obj_clear_state(ui_Switch2, LV_STATE_CHECKED);
-    lv_label_set_text(ui_Label6, "OFF");
+    lv_label_set_text(ui_Label1, "OFF");
   }
 }
 
@@ -332,7 +337,8 @@ void setup()
 
 #ifdef TFT_BL
   pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, HIGH);
+  //digitalWrite(TFT_BL, HIGH);
+  analogWrite(TFT_BL, 50);
 #endif
 
 #ifdef USE_UI
@@ -353,32 +359,8 @@ void setup()
 char buffer_t[10];
 char buffer_h[10];
 
-
-void loop()
-{
-#ifdef USE_UI
-  lv_timer_handler();
-  delay(5);
-#endif
-  if (led_flag_Lock == 1)
-  {
-    if (led_flag == 1)
-    {
-      led_flag_Lock = 0;
-      digitalWrite(LED, HIGH);
-      mqttClient.publish(MQTT_PUB_LED_S, 0, true, "ON");
-    }
-    else
-    {
-      led_flag_Lock = 0;
-      digitalWrite(LED, LOW);
-      mqttClient.publish(MQTT_PUB_LED_S, 0, true, "OFF");
-    }
-  }
-  unsigned long currentMillis = millis();
-  if (currentMillis - previousMillis >= interval_time)
-  {
-    previousMillis = currentMillis;
+void publishMqttSensor(){
+      
     // New DHT sensor readings
     hum = (int)dht20.getHumidity();
     // Read temperature as Celsius (the default)
@@ -404,5 +386,46 @@ void loop()
     uint16_t packetIdPub2 = mqttClient.publish(MQTT_PUB_HUM, 0, true, String(hum).c_str());
     Serial.printf("Publishing on topic %s at QoS 1, packetId %i: ", MQTT_PUB_HUM, packetIdPub2);
     Serial.printf("Message: %.2f \n", hum);
+
+}
+
+char buffer_rssi[10];
+
+void loop()
+{
+#ifdef USE_UI
+  lv_timer_handler();
+  delay(5);
+#endif
+  if (led_flag_Lock == 1)
+  {
+    //Serial.println(printf("Led_flag_lock %i", led_flag_Lock));
+    //Serial.println(printf("Led_flag %i", led_flag));
+
+    if (led_flag == 1)
+    {
+      led_flag_Lock = 0;
+      digitalWrite(LED, HIGH);
+      mqttClient.publish(MQTT_PUB_LED_S, 0, true, "ON");
+    }
+    else
+    {
+      led_flag_Lock = 0;
+      digitalWrite(LED, LOW);
+      mqttClient.publish(MQTT_PUB_LED_S, 0, true, "OFF");
+    }
+  }
+  unsigned long currentMillis = millis();
+  if (currentMillis - previousMillis >= interval_time)
+  {
+    previousMillis = currentMillis;
+    itoa(WiFi.RSSI(), buffer_rssi, 10);
+    lv_label_set_text(ui_Label4, buffer_rssi);
+    if(mqttClient.connected()){
+      lv_label_set_text(ui_Label6,"connected");
+    }
+    else {
+      lv_label_set_text(ui_Label6,"no");
+    }
   }
 }
