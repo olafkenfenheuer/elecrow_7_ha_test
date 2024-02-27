@@ -7,7 +7,7 @@ extern "C" {
 #include "freertos/timers.h"
 }
 #include <AsyncMqttClient.h>
-#include <DHT20.h>
+
 
 #include <secrets.h>
 
@@ -21,7 +21,7 @@ extern "C" {
 
 
 // Initialize DHT20 sensor
-DHT20 dht20;
+
 int LED = 38;
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
@@ -384,7 +384,7 @@ void setup()
   Serial.begin(9600);
   Wire.begin(19, 20);
   Serial.println();
-  dht20.begin();
+  
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
   WiFi.mode(WIFI_STA);
