@@ -21,18 +21,31 @@ void ui_event_Panel1(lv_event_t * e);
 extern lv_obj_t * ui_Panel1;
 void ui_event_Switch2(lv_event_t * e);
 extern lv_obj_t * ui_Switch2;
+void ui_event_Image2(lv_event_t * e);
 extern lv_obj_t * ui_Image2;
-extern lv_obj_t * ui_Label1;
+extern lv_obj_t * ui_Panel2;
 extern lv_obj_t * ui_Label4;
+extern lv_obj_t * ui_Label1;
 extern lv_obj_t * ui_Label6;
+extern lv_obj_t * ui_TextArea1;
+extern lv_obj_t * ui_Panel3;
+void ui_event_Slider1(lv_event_t * e);
+extern lv_obj_t * ui_Slider1;
+extern lv_obj_t * ui_Label2;
+void ui_event_Panel4(lv_event_t * e);
+extern lv_obj_t * ui_Panel4;
+void ui_event_Slider2(lv_event_t * e);
+extern lv_obj_t * ui_Slider2;
+extern lv_obj_t * ui_Label3;
 extern lv_obj_t * ui____initial_actions0;
-
-extern int led_flag_Lock;
-extern int led_flag;
 
 LV_IMG_DECLARE(ui_img_1797371272);    // assets/lightbulb-outline_40.png
 
-
+// Your code here
+extern int led_flag_Lock;
+extern int led_flag;
+extern int lcd_brightness;
+extern int lcd_brightness_flag_Lock;
 
 void ui_init(void);
 

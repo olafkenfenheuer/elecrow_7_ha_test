@@ -8,4 +8,22 @@
 void switch_1(lv_event_t * e)
 {
 	// Your code here
+    led_flag_Lock = 1;
+    led_flag = !led_flag;  
+}
+
+void slider_event(lv_event_t * e)
+{
+	// Your code here
+    lv_obj_t * slider = lv_event_get_target(e);
+	analogWrite(2, (int)lv_slider_get_value(slider));
+
+}
+
+void slider_event_brightness(lv_event_t * e)
+{
+	// Your code here
+	lv_obj_t * slider = lv_event_get_target(e);
+	lcd_brightness = (int)lv_slider_get_value(slider);
+	lcd_brightness_flag_Lock = 1;
 }

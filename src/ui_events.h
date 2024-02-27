@@ -11,6 +11,8 @@ extern "C" {
 #endif
 
 void switch_1(lv_event_t * e);
+void slider_event(lv_event_t * e);
+void slider_event_brightness(lv_event_t * e);
 
 #ifdef __cplusplus
 } /*extern "C"*/

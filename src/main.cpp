@@ -131,12 +131,14 @@ static lv_disp_drv_t disp_drv;
 
 int led_flag = 0;
 int led_flag_Lock = 0;
+int lcd_brightness = 128;
+int lcd_brightness_flag_Lock = 0;
 // Variables to hold sensor readings
 int  temp;
 int  hum;
 
 unsigned long previousMillis = 0;   // Stores last time temperature was published
-const long interval_time = 10000;        // Interval at which to publish sensor readings
+const long interval_time = 1000;        // Interval at which to publish sensor readings
 
 /* Display flushing */
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
@@ -187,7 +189,7 @@ void my_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
 
 void connectToWifi() {
   Serial.println("Connecting to Wi-Fi...");
-  
+  WiFi.setHostname("ESP-Display"); //define hostname
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
@@ -196,6 +198,101 @@ void connectToMqtt() {
   mqttClient.connect();
 }
 
+void WiFiEvent(WiFiEvent_t event)
+{
+    Serial.printf("[WiFi-event] event: %d\n", event);
+
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_READY: 
+            Serial.println("WiFi interface ready");
+            break;
+        case ARDUINO_EVENT_WIFI_SCAN_DONE:
+            Serial.println("Completed scan for access points");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_START:
+            Serial.println("WiFi client started");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_STOP:
+            Serial.println("WiFi clients stopped");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+            Serial.println("Connected to access point");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            Serial.println("Disconnected from WiFi access point");
+            xTimerStop(mqttReconnectTimer, 0); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+            xTimerStart(wifiReconnectTimer, 0);
+            break;
+        case ARDUINO_EVENT_WIFI_STA_AUTHMODE_CHANGE:
+            Serial.println("Authentication mode of access point has changed");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            Serial.print("Obtained IP address: ");
+            Serial.println(WiFi.localIP());
+            connectToMqtt();
+            break;
+        case ARDUINO_EVENT_WIFI_STA_LOST_IP:
+            Serial.println("Lost IP address and IP address is reset to 0");
+            break;
+        case ARDUINO_EVENT_WPS_ER_SUCCESS:
+            Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode");
+            break;
+        case ARDUINO_EVENT_WPS_ER_FAILED:
+            Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode");
+            break;
+        case ARDUINO_EVENT_WPS_ER_TIMEOUT:
+            Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode");
+            break;
+        case ARDUINO_EVENT_WPS_ER_PIN:
+            Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_START:
+            Serial.println("WiFi access point started");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STOP:
+            Serial.println("WiFi access point  stopped");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+            Serial.println("Client connected");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+            Serial.println("Client disconnected");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED:
+            Serial.println("Assigned IP address to client");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_PROBEREQRECVED:
+            Serial.println("Received probe request");
+            break;
+        case ARDUINO_EVENT_WIFI_AP_GOT_IP6:
+            Serial.println("AP IPv6 is preferred");
+            break;
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP6:
+            Serial.println("STA IPv6 is preferred");
+            break;
+        case ARDUINO_EVENT_ETH_GOT_IP6:
+            Serial.println("Ethernet IPv6 is preferred");
+            break;
+        case ARDUINO_EVENT_ETH_START:
+            Serial.println("Ethernet started");
+            break;
+        case ARDUINO_EVENT_ETH_STOP:
+            Serial.println("Ethernet stopped");
+            break;
+        case ARDUINO_EVENT_ETH_CONNECTED:
+            Serial.println("Ethernet connected");
+            break;
+        case ARDUINO_EVENT_ETH_DISCONNECTED:
+            Serial.println("Ethernet disconnected");
+            break;
+        case ARDUINO_EVENT_ETH_GOT_IP:
+            Serial.println("Obtained IP address");
+            break;
+        default: break;
+    }
+}
+
+/*
 void WiFiEvent(WiFiEvent_t event) {
   Serial.printf("[WiFi-event] event: %d\n", event);
   switch (event) {
@@ -212,6 +309,7 @@ void WiFiEvent(WiFiEvent_t event) {
       break;
   }
 }
+*/
 
 void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
@@ -256,13 +354,13 @@ void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties 
     digitalWrite(LED, HIGH);
     mqttClient.publish(MQTT_PUB_LED_S, 1, true, "ON");
     lv_obj_add_state(ui_Switch2, LV_STATE_CHECKED);
-    lv_label_set_text(ui_Label1, "ON");
+    lv_label_set_text(ui_Label1, "Light ON");
   }
   if (strncmp(payload, "OFF", 3) == 0) {
     digitalWrite(LED, LOW);
     mqttClient.publish(MQTT_PUB_LED_S, 1, true, "OFF");
     lv_obj_clear_state(ui_Switch2, LV_STATE_CHECKED);
-    lv_label_set_text(ui_Label1, "OFF");
+    lv_label_set_text(ui_Label1, "Light OFF");
   }
 }
 
@@ -289,7 +387,11 @@ void setup()
   dht20.begin();
   mqttReconnectTimer = xTimerCreate("mqttTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToMqtt));
   wifiReconnectTimer = xTimerCreate("wifiTimer", pdMS_TO_TICKS(2000), pdFALSE, (void*)0, reinterpret_cast<TimerCallbackFunction_t>(connectToWifi));
+  WiFi.mode(WIFI_STA);
+  
+
   WiFi.onEvent(WiFiEvent);
+  
   mqttClient.onConnect(onMqttConnect);
   mqttClient.onDisconnect(onMqttDisconnect);
   mqttClient.onSubscribe(onMqttSubscribe);
@@ -315,6 +417,9 @@ void setup()
 
   screenWidth = lcd.width();
   screenHeight = lcd.height();
+  lcd.setBrightness(128);
+  //lcd.setRotation(2);
+  
 
   lv_disp_draw_buf_init(&draw_buf, disp_draw_buf, NULL, screenWidth * screenHeight / 10);
   //  lv_disp_draw_buf_init(&draw_buf, disp_draw_buf, NULL, 480 * 272 / 10);
@@ -325,6 +430,9 @@ void setup()
   disp_drv.ver_res = screenHeight;
   disp_drv.flush_cb = my_disp_flush;
   disp_drv.draw_buf = &draw_buf;
+  //disp_drv.sw_rotate = 1;
+  
+  
   lv_disp_drv_register(&disp_drv);
 
   /* Initialize the (dummy) input device driver */
@@ -339,10 +447,13 @@ void setup()
   pinMode(TFT_BL, OUTPUT);
   //digitalWrite(TFT_BL, HIGH);
   analogWrite(TFT_BL, 50);
+  //lv_bar_set_start_value(ui_Slider1, 50, LV_ANIM_ON);
 #endif
 
 #ifdef USE_UI
   ui_init();//ui from Squareline or GUI Guider
+  //lv_bar_set_start_value(ui_Slider2, lcd.getBrightness(), LV_ANIM_ON);
+  
 #else
   lcd.fillScreen(TFT_RED);
   delay(800);
@@ -391,14 +502,23 @@ void loop()
       mqttClient.publish(MQTT_PUB_LED_S, 0, true, "OFF");
     }
   }
+
+  if( lcd_brightness_flag_Lock == 1){
+    lcd.setBrightness(lcd_brightness);
+    Serial.println(printf("Brightness: %i", lcd_brightness));
+    lcd_brightness_flag_Lock = 0;
+  }
+
   unsigned long currentMillis = millis();
   if (currentMillis - previousMillis >= interval_time)
   {
+    
     previousMillis = currentMillis;
     itoa(WiFi.RSSI(), buffer_rssi, 10);
-    lv_label_set_text(ui_Label4, buffer_rssi);
+    //lv_label_set_text(ui_Label4,strcat( "RSSI ", buffer_rssi));
+    lv_label_set_text(ui_Label4,buffer_rssi);
     if(mqttClient.connected()){
-      lv_label_set_text(ui_Label6,"connected");
+      lv_label_set_text(ui_Label6," MQTT connected");
     }
     else {
       lv_label_set_text(ui_Label6,"no");
